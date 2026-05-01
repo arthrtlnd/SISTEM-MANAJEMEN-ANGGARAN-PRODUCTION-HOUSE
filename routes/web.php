@@ -33,10 +33,25 @@ Route::prefix('budget')->name('budget.')->middleware(['auth'])->group(function (
     // Laporan
     Route::get('/laporan', [BudgetController::class, 'laporan'])->name('laporan');
 
-    // Hire Major Crew
-    Route::get('/hire-crew', function() {
-        return view('budget.hire-crew', ['projects' => \App\Models\Project::all()]);
-    })->name('hire-crew-page');
+    // Hire Major Crew (ADMIN & PRODUSER ONLY)
+    Route::middleware('role:admin,produser')->group(function () {
+        Route::get('/hire-crew', function() {
+            $user = auth()->user();
+            
+            // Admin lihat semua project
+            if ($user->isAdmin()) {
+                $projects = \App\Models\Project::all();
+            } 
+            // Produser hanya lihat project mereka
+            else if ($user->isProduser()) {
+                $projects = \App\Models\Project::where('pic_id', $user->id)->get();
+            } else {
+                abort(403, 'Anda tidak memiliki akses untuk hire crew.');
+            }
+            
+            return view('budget.hire-crew', ['projects' => $projects]);
+        })->name('hire-crew-page');
 
-    Route::post('/hire-crew/{projectId}', [CrewController::class, 'hireForProject'])->name('hire-crew');
+        Route::post('/hire-crew/{projectId}', [CrewController::class, 'hireForProject'])->name('hire-crew');
+    });
 });
